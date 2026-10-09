@@ -1,19 +1,22 @@
-# Stage 1: Build de la aplicación con JDK 25
-FROM maven:3.9.9-eclipse-temurin-25-alpine AS build
+# Stage 1: Build con JDK 25
+FROM eclipse-temurin:25-jdk-alpine AS build
 WORKDIR /app
 
-# Copia de archivos de configuración y código fuente
+# Instalar Maven en la imagen con JDK 25
+RUN apk add --no-cache maven
+
+# Copiar configuración y dependencias primero para aprovechar el caché de Docker
 COPY pom.xml .
 COPY src ./src
 
-# Compilación omitiendo pruebas
+# Compilar omitiendo los tests
 RUN mvn clean package -DskipTests
 
-# Stage 2: Imagen final de ejecución con JDK 25
+# Stage 2: Runtime liviano con JRE 25
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
-# Copia del ejecutable generado en el stage 1
+# Copiar el artefacto generado
 COPY --from=build /app/target/*.jar app.jar
 
 # Exponer el puerto
