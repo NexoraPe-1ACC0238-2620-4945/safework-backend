@@ -1,0 +1,15 @@
+name: safework-test
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?required}
+      MYSQL_DATABASE: ${DB_NAME:?required}
+      MYSQL_USER: ${DB_USERNAME:?required}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?required}
+    ports:
+      - "127.0.0.1:33317:3306"
+    volumes:
+      - safework_test_data:/var/lib/mysql
+volumes:
+  safework_test_data:

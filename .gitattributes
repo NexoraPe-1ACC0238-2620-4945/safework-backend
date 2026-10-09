@@ -1,0 +1,27 @@
+/mvnw text eol=lf
+*.cmd text eol=crlf
+
+# --- NUEVAS REGLAS DE SEGURIDAD ---
+
+# Configuración global: Git detecta qué es texto y qué es binario automáticamente
+* text=auto
+
+# Forzar que el código fuente siempre se guarde como LF (estándar Linux/Servidores)
+# Esto evita que Windows suba basura de CRLF al repositorio
+*.java text eol=lf
+*.xml text eol=lf
+*.properties text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
+*.sh text eol=lf
+
+# Asegurar que archivos binarios no se modifiquen accidentalmente
+*.jar binary
+*.war binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
