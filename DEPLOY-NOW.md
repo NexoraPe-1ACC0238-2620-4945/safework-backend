@@ -1,4 +1,4 @@
-pe# Deploy this backend
+# Deploy this backend
 
 This checkout implements self-service registration and company membership.
 A global ADMIN account and invitation codes are not required.
@@ -25,10 +25,9 @@ new onboarding screens and request DTOs; that mobile change is a separate phase.
 
 ## Before your friend deploys
 
-The implementation is currently in the local branch feature/self-service-companies.
-This work did not create a commit or push to GitHub. Your friend must receive and publish
-the reviewed source before a Git-linked Render deployment can use it. Remote main still
-contains the prior version until publication.
+The implementation is on feature/self-service-companies. Publish the reviewed TLS fix
+on the branch selected in Render before redeploying; a local edit does not update the
+running service. Confirm the deployed source SHA with the service owner.
 
 Check Render's auto-deploy settings before publishing. Use an unwatched review branch
 or arrange the maintenance window so a push cannot activate the new code before the
@@ -57,16 +56,20 @@ SAFEWORK_PASSWORD_RESET_ENABLED true in the normal web service.
 Use the Dockerfile in this repository, APP_PROFILE=prod, health path /health.
 PORT is supported and the production listener binds to 0.0.0.0.
 Configure DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD, JWT_SECRET privately.
-Aiven TLS requires DB_TRUSTSTORE_PASSWORD and exactly one of DB_TRUSTSTORE_URL or
-DB_TRUSTSTORE_BASE64. The container decodes the base64 form to an owner-only temporary
-file. DDL_AUTO=validate and MIGRATIONS_ENABLED=false are the normal web settings.
+Download the CA certificate from the same Aiven service. In Render Environment >
+Secret Files create ca.pem and paste the full PEM certificate contents. The container
+reads /etc/secrets/ca.pem and prepares its private PKCS12 store automatically.
+DB_TRUSTSTORE_URL, DB_TRUSTSTORE_BASE64 and DB_TRUSTSTORE_PASSWORD are not needed for
+this approach; remove legacy values if switching to ca.pem. Keep sslMode=VERIFY_IDENTITY.
+DDL_AUTO=validate and MIGRATIONS_ENABLED=false are the normal web settings.
+For an operator laptop set DB_CA_CERT_PATH to the downloaded ca.pem file.
 
 No secret belongs in Git or build arguments. See .env.example for variable names;
 Spring does not automatically load that file.
 
 ## Verification in this checkout
 
-A clean build and all 35 tests passed again after integration, using the existing
+A clean build and all 40 tests passed after the TLS correction, using the existing
 isolated MySQL test instance. Reports are in .local/verified-build/surefire-reports;
 the build log is .local/maven-verify.log.
 
@@ -86,5 +89,5 @@ and configure Java/MySQL paths. No test may target Aiven.
 
 The same production Java implementation previously passed a Docker image build,
 16 HTTP checks with isolated mysql:8.4, 26 packaged-JAR HTTP checks and four truststore
-entrypoint checks. Production migration, production TLS and public HTTP validation are
-still pending. This guide does not claim that the running Render service was changed.
+entrypoint checks. Actual Aiven migration and public Render HTTP validation are
+still pending. Five production-profile TLS checks passed with a synthetic CA and isolated MySQL8.4, including certificate-hostname rejection. This guide does not claim that the running Render service was changed.

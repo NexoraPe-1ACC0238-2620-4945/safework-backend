@@ -20,18 +20,26 @@ Configure privately:
 - DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD
 - JWT_SECRET: at least 64 UTF-8 bytes; use the reviewed service secret
 - JWT_EXPIRATION: 1–365 days, default 7
-- DB_TRUSTSTORE_URL: file URL of a dedicated PKCS12 truststore containing the Aiven CA
-- Or DB_TRUSTSTORE_BASE64: base64 text of that PKCS12 file for the Render environment
-- DB_TRUSTSTORE_PASSWORD: private truststore password
+- In Render Environment > Secret Files, add ca.pem with the full PEM CA certificate
+  downloaded from the same Aiven service. No manual truststore variables are needed.
+- For an operator laptop, set DB_CA_CERT_PATH to that downloaded certificate file.
+- Alternative: DB_CA_CERT_BASE64 containing the PEM certificate encoded as base64.
 - DDL_AUTO=validate; MIGRATIONS_ENABLED=false
 
-Production forces Connector/J sslMode=VERIFY_IDENTITY and disables public-key retrieval.
-There is no insecure TLS fallback. Make the truststore accessible to the container's
-non-root user through a reviewed file mount, or set DB_TRUSTSTORE_BASE64 instead of
-DB_TRUSTSTORE_URL. The entrypoint decodes that text to an owner-only temporary file
-and exports its file URL before Java starts. It rejects supplying both forms.
-A CA certificate is public;
-database passwords, JWT keys and truststore passwords are not.
+Production uses Connector/J sslMode=VERIFY_IDENTITY and disables public-key retrieval.
+The production properties keep only the JDBC URL, username, password, SQL logging and
+listener address. The container automatically reads /etc/secrets/ca.pem, imports all
+certificates in its PEM bundle using keytool, and creates an owner-only temporary
+PKCS12 store with a generated password. The Java production configuration supplies
+that store to Hikari before opening the database connection. The entrypoint reports
+a clear certificate error if no CA is configured; it never disables TLS verification.
+
+Advanced legacy input remains available: DB_TRUSTSTORE_URL (readable local PKCS12 file
+URL) or DB_TRUSTSTORE_BASE64 (encoded PKCS12 file), plus DB_TRUSTSTORE_PASSWORD. Choose
+only one explicit certificate source. Remove old truststore variables when switching
+to the simpler PEM setup. A CA certificate is public; database passwords, JWT keys and
+truststore passwords are not. Do not change DB_HOST to an IP: hostname verification
+must match the service certificate.
 
 Spring does not automatically load .env. .env.example has names and empty secret values.
 Remove legacy bootstrap flags from the web service. Recovery/migration flags must never

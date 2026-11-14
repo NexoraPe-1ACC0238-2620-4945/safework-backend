@@ -29,28 +29,18 @@ if($Profile -eq 'dev' -and $child.DB_HOST -notin @('127.0.0.1','localhost')){thr
 if($BaselineLegacy -and $Action -ne 'Migrate'){throw 'BaselineLegacy is only valid for a reviewed legacy migration.'}
 $child.APP_PROFILE=$Profile;$child.DDL_AUTO='validate';$child.MIGRATIONS_ENABLED='false';$child.TZ='UTC'
 if($Profile -eq 'prod'){
-    $trustUrl=[Environment]::GetEnvironmentVariable('DB_TRUSTSTORE_URL')
-    $trustBase64=[Environment]::GetEnvironmentVariable('DB_TRUSTSTORE_BASE64')
-    if(($trustUrl -and $trustBase64) -or (-not $trustUrl -and -not $trustBase64)){throw 'Set exactly one of DB_TRUSTSTORE_URL or DB_TRUSTSTORE_BASE64.'}
-    $trustPassword=[Environment]::GetEnvironmentVariable('DB_TRUSTSTORE_PASSWORD')
-    if(-not $trustPassword){throw 'Set DB_TRUSTSTORE_PASSWORD privately.'}
-    $child.DB_TRUSTSTORE_PASSWORD=$trustPassword
-    if($trustUrl){$child.DB_TRUSTSTORE_URL=$trustUrl}else{$child.DB_TRUSTSTORE_BASE64=$trustBase64}
+    . (Join-Path $PSScriptRoot 'prepare-tls.ps1')
+    Set-TlsInputFromEnvironment $child
 }else{$child.DB_TLS='false';$child.DB_ALLOW_PUBLIC_KEY='true'}
 $destination='{0}:{1}/{2}' -f $child.DB_HOST,$child.DB_PORT,$child.DB_NAME
 Write-Host ('Proposed '+$Action+' destination: '+$destination)
 if(-not $Execute){Write-Host 'Preparation only. No process or database operation was started.';return}
 if((Read-Host ('Type the exact destination to confirm '+$destination)) -cne $destination){throw 'Destination not confirmed.'}
-$secure=$null;$repeat=$null;$newPassword=$null;$p=$null;$temporaryTrust=$null
+$secure=$null;$repeat=$null;$newPassword=$null;$p=$null;$temporaryTls=@()
 $stamp=[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss-ffff')
 $runtime=Join-Path $repo '.local';New-Item -ItemType Directory -Path $runtime -Force|Out-Null
 try{
-    if($child.ContainsKey('DB_TRUSTSTORE_BASE64')){
-        $temporaryTrust=Join-Path $runtime ('truststore-'+[Guid]::NewGuid().ToString('N')+'.p12')
-        [IO.File]::WriteAllBytes($temporaryTrust,[Convert]::FromBase64String($child.DB_TRUSTSTORE_BASE64))
-        $child.DB_TRUSTSTORE_URL=(New-Object Uri([IO.Path]::GetFullPath($temporaryTrust))).AbsoluteUri
-        $child.Remove('DB_TRUSTSTORE_BASE64');$trustBase64=$null
-    }
+    if($Profile -eq 'prod'){$temporaryTls=@(Initialize-OperatorTruststore $child $JavaHome $runtime)}
     if($Action -eq 'Migrate'){
         $child.SAFEWORK_MIGRATE_ENABLED='true'
         if($BaselineLegacy){
@@ -86,4 +76,4 @@ try{
     [pscustomobject]@{action=$Action;destination=$destination;userId=$UserId;exitCode=$p.ExitCode;timedOut=$timedOut;occurredAtUtc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $runtime ('operator-'+$stamp+'.json'))
     if($timedOut -or $p.ExitCode -ne 0){throw 'Operation failed or uncertain. Review the private log and database state; do not retry automatically.'}
     Write-Host 'Operation completed with exit code 0. Perform the documented HTTP checks.'
-}finally{$child.Clear();$newPassword=$null;if($secure){$secure.Dispose()};if($repeat){$repeat.Dispose()};if($p){$p.Dispose()};if($temporaryTrust -and (Test-Path -LiteralPath $temporaryTrust)){Remove-Item -LiteralPath $temporaryTrust -Force}}
+}finally{$child.Clear();$newPassword=$null;if($secure){$secure.Dispose()};if($repeat){$repeat.Dispose()};if($p){$p.Dispose()};foreach($temporary in $temporaryTls){if((Test-Path -LiteralPath $temporary) -and [IO.Path]::GetFullPath($temporary).StartsWith([IO.Path]::GetFullPath($runtime)+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){Remove-Item -LiteralPath $temporary -Force}}}

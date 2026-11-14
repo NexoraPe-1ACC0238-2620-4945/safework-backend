@@ -5,7 +5,7 @@
 - Fresh independent clone of the current-course repository at base commit
   5badac5ade6c5996af81d5f1038a790ac5321842. Original repositories and production data
   were preserved. No commit, push, PR, merge or deployment was performed.
-- Maven verify completed with **35 tests, zero failures/errors/skips** against an
+- Maven verify completed with **40 tests, zero failures/errors/skips** against an
   independently provisioned **MySQL 9.5.0** instance on loopback port 33319.
   JBR/JDK 25.0.3 was used. Reports: .local/maven-verify.log and target/surefire-reports.
 - Real HTTP integration tests cover account signup without codes; company creation;
@@ -44,7 +44,7 @@
   admission and session invalidation. Both test containers, their anonymous volumes
   and their private network were removed afterward. Source/runtime smoke helpers do
   not publish or deploy images. Container packaging skips integration tests; the
-  complete 35-test Maven verify remains the release gate.
+  complete 40-test Maven verify remains the release gate.
 - No Aiven connection, TLS handshake against production, deployed-SHA verification,
   production-schema inspection, restored-production-data rehearsal or production HTTP
   session was executed. The actual Aiven MySQL version must be confirmed and matched in
@@ -69,3 +69,23 @@ scripts/operator.ps1 defaults to preparation mode and requires -Execute plus int
 destination confirmation for recovery or migration.
 
 Diagnostic evidence and credentials remain under .local and must not be published.
+
+## TLS correction verified locally
+
+The production datasource file now contains only the five standard properties. No
+unresolved truststore placeholder is passed to Connector/J. Render can supply the
+Aiven PEM certificate as Secret File ca.pem; the entrypoint imports it automatically.
+Legacy explicit PKCS12 input remains supported.
+
+- Full clean Maven verify: 40 tests, zero failures/errors/skips. Reports are in
+  .local/verified-build/surefire-reports, log in .local/maven-verify.log.
+- Docker rebuild succeeded. All four existing entrypoint checks passed again.
+- scripts/check-production-tls.ps1 passed five checks with a new isolated mysql:8.4
+  instance and a synthetic CA: prod-profile V1-V3 migration, application startup with
+  only /etc/secrets/ca.pem, signup, login/logout, and certificate-hostname rejection.
+  Evidence: .local/production-tls-verification.json. No Aiven connection was opened.
+- Windows operator PEM preparation passed using a local test CA without altering it.
+- The TLS fixture containers, network, volume and synthetic credentials were removed.
+
+Publish the reviewed correction and redeploy the selected branch to update Render.
+The original deployment and migration requirements above still apply to real data.
