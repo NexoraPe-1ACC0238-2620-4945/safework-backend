@@ -26,7 +26,7 @@ public class User extends AuditableAbstractAggregateRoot<User> {
     // "fk_company_id"))})
     // private CompanyId companyId;
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "fk_company_id", nullable = false)
+    @JoinColumn(name = "fk_company_id")
     private Company company;
 
     /**/
@@ -61,6 +61,9 @@ public class User extends AuditableAbstractAggregateRoot<User> {
     @Column(nullable = false)
     private long securityVersion;
 
+    @Column(nullable = false)
+    private boolean membershipActive;
+
     @Getter
     private String profilePictureUrl;
 
@@ -75,6 +78,7 @@ public class User extends AuditableAbstractAggregateRoot<User> {
     public User(Company company, String fullName, EmailAddress emailAddress, String passwordHash, List<Role> roles) {
         this();
         this.company = company;
+        this.membershipActive = company != null;
         this.fullName = com.nexorape.safework.service.shared.domain.model.valueobjects.TextRules.normalized(fullName,120);
         this.emailAddress = emailAddress;
         this.passwordHash = passwordHash;
@@ -117,15 +121,22 @@ public class User extends AuditableAbstractAggregateRoot<User> {
     }
     public void setCompany(Company company) {
         if(company == null) throw new IllegalArgumentException("Company is required.");
-        if(this.company == null || !this.company.getId().equals(company.getId())) {
+        if(this.company != null && !this.company.getId().equals(company.getId()))
+            throw new IllegalStateException("An account belongs to one company for this version.");
+        if(this.company == null) {
             this.company = company; securityVersion++;
         }
     }
+    public void setMembershipActive(boolean active) {
+        if(active && company == null) throw new IllegalStateException("An active membership requires a company.");
+        if(membershipActive != active) { membershipActive = active; securityVersion++; }
+    }
+    public void invalidateSessions() { securityVersion++; }
     public void setEnabled(boolean enabled) {
         if(this.enabled != enabled) { this.enabled = enabled; securityVersion++; }
     }
     public Long getCompanyId() {
-        return this.company.getId();
+        return this.company == null ? null : this.company.getId();
     }
 
     public String getEmail() {

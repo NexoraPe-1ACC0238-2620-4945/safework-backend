@@ -11,13 +11,13 @@ public class CompanyQueryServiceImpl implements CompanyQueryService {
     private final AccessPolicy access;
     public CompanyQueryServiceImpl(AccessPolicy access) { this.access=access; }
     public Optional<Company> handle(GetCompanyByIdQuery query) {
-        var company=access.current().getCompany(); if(!company.getId().equals(query.companyId())) throw ApiException.notFound(); return Optional.of(company);
+        var company=access.mobile().getCompany(); if(!company.getId().equals(query.companyId())) throw ApiException.notFound(); return Optional.of(company);
     }
-    public List<Company> handle(GetAllCompaniesQuery query) { return List.of(access.current().getCompany()); }
+    public List<Company> handle(GetAllCompaniesQuery query) { return List.of(access.mobile().getCompany()); }
     public Optional<Company> handle(GetCompanyByRegistrationCodeQuery query) {
-        var company=access.current().getCompany(); if(!company.getRegistrationCode().equals(query.registrationCode().code())) throw ApiException.notFound(); return Optional.of(company);
+        throw ApiException.notFound();
     }
     public Optional<Company> handle(GetCompanyByNameQuery query) {
-        var company=access.current().getCompany(); if(!company.getName().equals(query.name())) throw ApiException.notFound(); return Optional.of(company);
+        var company=access.mobile().getCompany(); if(!company.getName().equals(query.name())) throw ApiException.notFound(); return Optional.of(company);
     }
 }

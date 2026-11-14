@@ -19,7 +19,7 @@ public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
             try {
                 if(!tokens.validateToken(token)) { ApiError.authentication(response); return; }
                 var user=users.findById(tokens.getUserIdFromToken(token)).orElseThrow();
-                if(!user.isEnabled() || !user.getCompany().isActive() || !user.getCompanyId().equals(tokens.getCompanyIdFromToken(token)) || !user.getEmail().equals(tokens.getUsernameFromToken(token))) {
+                if(!user.isEnabled() || !java.util.Objects.equals(user.getCompanyId(),tokens.getCompanyIdFromToken(token)) || !user.getEmail().equals(tokens.getUsernameFromToken(token))) {
                     ApiError.authentication(response); return;
                 }
                 var sessionId=tokens.getSessionIdFromToken(token);

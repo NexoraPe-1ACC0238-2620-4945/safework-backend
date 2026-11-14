@@ -24,7 +24,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> malformed(Exception e) { return business(ApiException.validation()); }
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiError> state(IllegalStateException e) { return business(ApiException.state()); }
-    @ExceptionHandler({DataIntegrityViolationException.class,PessimisticLockingFailureException.class})
+    @ExceptionHandler({DataIntegrityViolationException.class,PessimisticLockingFailureException.class,org.springframework.dao.OptimisticLockingFailureException.class})
     public ResponseEntity<ApiError> conflict(Exception e) { return ResponseEntity.status(409).body(new ApiError("STATE_CONFLICT","Concurrent or conflicting operation.")); }
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> forbidden(Exception e) { return business(ApiException.forbidden()); }

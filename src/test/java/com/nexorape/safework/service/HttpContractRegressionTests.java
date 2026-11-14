@@ -1,7 +1,7 @@
 package com.nexorape.safework.service;
 
 import com.nexorape.safework.service.iam.domain.model.aggregates.*;
-import com.nexorape.safework.service.iam.domain.model.entities.CompanyInvitation;
+
 import com.nexorape.safework.service.iam.domain.model.valueobjects.*;
 import com.nexorape.safework.service.iam.domain.model.valueobjects.user.EmailAddress;
 import com.nexorape.safework.service.iam.infrastructure.persistence.jpa.repositories.*;
@@ -37,7 +37,7 @@ class HttpContractRegressionTests {
     @Autowired CompanyRepository companies;
     @Autowired UserRepository users;
     @Autowired RoleRepository roles;
-    @Autowired CompanyInvitationRepository invitations;
+
     @Autowired IncidentRepository incidents;
     @Autowired AssignmentRepository assignments;
     @Autowired NotificationRepository notifications;
@@ -57,7 +57,7 @@ class HttpContractRegressionTests {
         beta=companies.saveAndFlush(new Company("Synthetic Beta "+UUID.randomUUID()));
         worker=user(alpha,Roles.WORKER); employer=user(alpha,Roles.EMPLOYER);
         otherEmployer=user(alpha,Roles.EMPLOYER); foreignWorker=user(beta,Roles.WORKER);
-        foreignEmployer=user(beta,Roles.EMPLOYER); admin=user(alpha,Roles.ADMIN);
+        foreignEmployer=user(beta,Roles.EMPLOYER); admin=user(null,Roles.WORKER);
         workerToken=login(worker); employerToken=login(employer); otherToken=login(otherEmployer);
         foreignToken=login(foreignWorker); foreignEmployerToken=login(foreignEmployer); adminToken=login(admin);
     }
@@ -98,11 +98,7 @@ class HttpContractRegressionTests {
         });
     }
     Map<String,Object> signup(String email,String proof) {
-        return Map.of("fullName","Synthetic New Worker","emailAddress",email,"password",password,"invitationToken",proof);
-    }
-    String invite(String email) throws Exception {
-        var result=call("issue company invitation","POST","/companies/"+alpha.getId()+"/invitations",employerToken,Map.of("emailAddress",email));
-        status(result,201); return result.body.get("invitationToken").asString();
+        return Map.of("fullName","Synthetic New Worker","emailAddress",email,"password",password);
     }
     @Test void authenticationAndOwnProfile() throws Exception {
         status(call("missing token","GET","/users/me",null,null),401);
@@ -121,33 +117,25 @@ class HttpContractRegressionTests {
         assertNotNull(OffsetDateTime.parse(profile.body.get("createdAt").asString()));
         status(call("foreign user detail","GET","/users/"+foreignWorker.getId(),workerToken,null),404);
         var list=call("legacy user list","GET","/users",workerToken,null); status(list,200); assertEquals(1,list.body.size());
-        status(call("foreign company detail","GET","/companies/"+beta.getId(),workerToken,null),404);
+        status(call("minimal foreign company discovery","GET","/companies/"+beta.getId(),workerToken,null),200);
         status(call("profile update","PATCH","/users/me",workerToken,Map.of("fullName","Synthetic Updated","phoneNumber","+51 900 000 000")),200);
         status(call("profile role injection","PATCH","/users/me",workerToken,Map.of("roles",List.of("ADMIN"))),400);
         status(call("profile invalid phone","PATCH","/users/me",workerToken,Map.of("phoneNumber","abcd12345")),400);
     }
-    @Test void invitationRegistrationAndSharedRoles() throws Exception {
+    @Test void registrationWithoutInvitationAndSharedRoles() throws Exception {
         long roleCount=roles.count();
-        var invalidEmail=UUID.randomUUID()+"@example.test"; var invalidProof=invite(invalidEmail);
-        var shortPassword=new HashMap<String,Object>(signup(invalidEmail,invalidProof));shortPassword.put("password","x".repeat(11));
+        String email=UUID.randomUUID()+"@example.test";
+        var shortPassword=new HashMap<String,Object>(signup(email,""));shortPassword.put("password","x".repeat(11));
         status(call("short signup password","POST","/authentication/sign-up",null,shortPassword),400);
-        var email=UUID.randomUUID()+"@example.test"; var proof=invite(email);
-        var injection=new HashMap<String,Object>(signup(email,proof)); injection.put("roles",List.of("ADMIN","EMPLOYER")); injection.put("companyId",beta.getId());
-        status(call("public privilege and company injection","POST","/authentication/sign-up",null,injection),400);
-        status(call("invite email mismatch","POST","/authentication/sign-up",null,signup(UUID.randomUUID()+"@example.test",proof)),422);
-        var created=call("invitation registration","POST","/authentication/sign-up",null,signup(email,proof));
-        status(created,201); assertEquals(alpha.getId().longValue(),created.body.get("companyId").asLong());
-        assertEquals(1,created.body.get("roles").size()); assertEquals("WORKER",created.body.get("roles").get(0).asString());
-        status(call("invite replay","POST","/authentication/sign-up",null,signup(email,proof)),422);
-        status(call("missing invite","POST","/authentication/sign-up",null,Map.of("fullName","Synthetic","emailAddress",UUID.randomUUID()+"@example.test","password",password)),422);
-        var expired=UUID.randomUUID().toString();
-        invitations.saveAndFlush(new CompanyInvitation(alpha,email,MembershipService.digest(expired),Instant.now().minusSeconds(5)));
-        status(call("expired invite","POST","/authentication/sign-up",null,signup(email,expired)),422);
-        var email2=UUID.randomUUID()+"@example.test";
-        status(call("second worker registration","POST","/authentication/sign-up",null,signup(email2,invite(email2))),201);
+        var injection=new HashMap<String,Object>(signup(email,""));injection.put("roles",List.of("EMPLOYER"));injection.put("companyId",beta.getId());
+        status(call("public role/company injection","POST","/authentication/sign-up",null,injection),400);
+        var created=call("registration without invitation","POST","/authentication/sign-up",null,signup(email,""));
+        status(created,201);assertTrue(created.body.get("companyId").isNull());
+        assertEquals("UNASSIGNED",created.body.get("membershipStatus").asString());
+        assertEquals("WORKER",created.body.get("roles").get(0).asString());
+        status(call("duplicate email","POST","/authentication/sign-up",null,signup(email,"")),409);
         assertEquals(roleCount,roles.count());
-        status(call("worker cannot issue invite","POST","/companies/"+alpha.getId()+"/invitations",workerToken,Map.of("emailAddress",email)),403);
-        status(call("foreign employer cannot invite","POST","/companies/"+alpha.getId()+"/invitations",foreignEmployerToken,Map.of("emailAddress",email)),404);
+        status(call("removed invitation endpoint","POST","/companies/"+alpha.getId()+"/invitations",employerToken,Map.of("emailAddress",email)),404);
     }
     @Test void selfAssignmentAndResponsibleLifecycle() throws Exception {
         long id=create(workerToken,"Lifecycle synthetic hazard");
@@ -235,7 +223,7 @@ class HttpContractRegressionTests {
         var account=user(alpha,Roles.WORKER); var bearer=login(account);
         account.setEnabled(false); users.saveAndFlush(account);
         status(call("disabled account token","GET","/users/me",bearer,null),401);
-        account.setEnabled(true); account.setCompany(beta); users.saveAndFlush(account);
+        account.setEnabled(true); account.setMembershipActive(false); users.saveAndFlush(account);
         status(call("changed company token","GET","/users/me",bearer,null),401);
         var manager=user(alpha,Roles.EMPLOYER); var managerToken=login(manager);
         manager.setRoles(new HashSet<>(List.of(roles.findByName(Roles.WORKER).orElseThrow()))); users.saveAndFlush(manager);
@@ -244,22 +232,20 @@ class HttpContractRegressionTests {
         status(call("removed employer cannot take","POST","/assignments",managerToken,Map.of("incidentId",id)),401);
         assertEquals(base,snapshot(id));
     }
-    @Test void duplicateEmailRollsBackInvitationConsumption() throws Exception {
-        String proof=invite(worker.getEmail());
-        status(call("duplicate registered email","POST","/authentication/sign-up",null,signup(worker.getEmail(),proof)),409);
-        var record=new TransactionTemplate(transactions).execute(s -> invitations.lockByDigest(MembershipService.digest(proof)).orElseThrow());
-        assertNull(record.getConsumedAt());
+    @Test void duplicateEmailDoesNotChangeExistingAccount() throws Exception {
+        long before=users.count();var original=users.findById(worker.getId()).orElseThrow().getPasswordHash();
+        status(call("duplicate registered email","POST","/authentication/sign-up",null,signup(worker.getEmail(),"")),409);
+        assertEquals(before,users.count());assertEquals(original,users.findById(worker.getId()).orElseThrow().getPasswordHash());
     }
-    @Test void concurrentInvitationHasSingleConsumer() throws Exception {
-        String email=UUID.randomUUID()+"@example.test"; String proof=invite(email);
-        long before=users.count();long roleCount=roles.count();
+    @Test void concurrentRegistrationHasSingleWinner() throws Exception {
+        String email=UUID.randomUUID()+"@example.test";long before=users.count();
         try(var executor=Executors.newVirtualThreadPerTaskExecutor()) {
-            var a=executor.submit(()->call("concurrent registration A","POST","/authentication/sign-up",null,signup(email,proof)));
-            var b=executor.submit(()->call("concurrent registration B","POST","/authentication/sign-up",null,signup(email,proof)));
+            var a=executor.submit(()->call("concurrent signup A","POST","/authentication/sign-up",null,signup(email,"")));
+            var b=executor.submit(()->call("concurrent signup B","POST","/authentication/sign-up",null,signup(email,"")));
             var codes=new ArrayList<>(List.of(a.get().status,b.get().status));Collections.sort(codes);
-            assertEquals(List.of(201,422),codes);
+            assertEquals(List.of(201,409),codes);
         }
-        assertEquals(before+1,users.count());assertEquals(roleCount,roles.count());
+        assertEquals(before+1,users.count());
     }
     @Test @Order(Integer.MAX_VALUE) void authRateLimitReturnsSanitizedError() throws Exception {
         boolean limited=false;

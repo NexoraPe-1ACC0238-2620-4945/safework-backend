@@ -17,6 +17,7 @@ public class AuthenticationController {
         return AuthenticatedUserResourceFromEntityAssembler.toResourceFromEntity(result.getLeft(),result.getRight());
     }
     @PostMapping("/sign-up") @SecurityRequirements
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode="201",description="Unassigned account created; sign in separately")
     public ResponseEntity<UserResource> signUp(@Valid @RequestBody SignUpResource resource) {
         var user=users.handle(SignUpCommandFromResourceAssembler.toCommandFromResource(resource)).orElseThrow(ApiException::validation);
         return ResponseEntity.status(201).body(UserResourceFromEntityAssembler.toResourceFromEntity(user));

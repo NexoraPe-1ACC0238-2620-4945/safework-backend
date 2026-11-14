@@ -21,13 +21,17 @@ public class AccessPolicy {
         boolean writing=TransactionSynchronizationManager.isActualTransactionActive()
             && !TransactionSynchronizationManager.isCurrentTransactionReadOnly();
         var user=(writing?users.lockById(principal.getId()):users.findById(principal.getId())).orElseThrow(ApiException::session);
-        if(!user.isEnabled() || !user.getCompany().isActive() || !user.getCompanyId().equals(principal.getCompanyId())) throw ApiException.session();
+        if(!user.isEnabled() || !java.util.Objects.equals(user.getCompanyId(),principal.getCompanyId())) throw ApiException.session();
         sessions.requireActive(principal.getSessionId(),user);
         return user;
     }
     public boolean has(User user,String role) { return user.getRoles().stream().anyMatch(r -> r.getStringName().equals(role)); }
-    public User mobile() { var user=current(); if(!has(user,"WORKER") && !has(user,"EMPLOYER")) throw ApiException.forbidden(); return user; }
+    public User mobile() {
+        var user=current();
+        if(user.getCompany()==null || !user.isMembershipActive() || !user.getCompany().isActive()
+                || (!has(user,"WORKER") && !has(user,"EMPLOYER"))) throw ApiException.forbidden();
+        return user;
+    }
     public User employer() { var user=mobile(); if(!has(user,"EMPLOYER")) throw ApiException.forbidden(); return user; }
-    public User administrator() { var user=current(); if(!has(user,"ADMIN")) throw ApiException.forbidden(); return user; }
     public void ownCompany(Long companyId) { if(!mobile().getCompanyId().equals(companyId)) throw ApiException.notFound(); }
 }

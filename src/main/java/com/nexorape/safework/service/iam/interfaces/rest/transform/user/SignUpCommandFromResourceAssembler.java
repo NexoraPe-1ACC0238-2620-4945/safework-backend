@@ -4,6 +4,6 @@ import com.nexorape.safework.service.iam.domain.model.valueobjects.user.EmailAdd
 import com.nexorape.safework.service.iam.interfaces.rest.resources.user.SignUpResource;
 public final class SignUpCommandFromResourceAssembler {
     public static SignUpCommand toCommandFromResource(SignUpResource resource) {
-        return new SignUpCommand(resource.fullName(),new EmailAddress(resource.emailAddress()),resource.password(),resource.invitationToken());
+        return new SignUpCommand(resource.fullName(),new EmailAddress(resource.emailAddress()),resource.password());
     }
 }

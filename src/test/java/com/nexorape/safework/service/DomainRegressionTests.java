@@ -1,7 +1,7 @@
 package com.nexorape.safework.service;
 import com.nexorape.safework.service.iam.domain.model.aggregates.Company;
 import com.nexorape.safework.service.iam.domain.model.aggregates.User;
-import com.nexorape.safework.service.iam.domain.model.entities.CompanyInvitation;
+import com.nexorape.safework.service.iam.domain.model.entities.MembershipRequest;
 import com.nexorape.safework.service.iam.domain.model.valueobjects.user.PasswordRules;
 import com.nexorape.safework.service.incidentmanagement.domain.model.aggregates.Incident;
 import com.nexorape.safework.service.incidentmanagement.domain.model.commands.incident.CreateIncidentCommand;
@@ -34,17 +34,11 @@ class DomainRegressionTests {
         assertThrows(IllegalArgumentException.class,()->PasswordRules.validate("é".repeat(33)));
         assertDoesNotThrow(()->PasswordRules.validate("x".repeat(64)));
     }
-    @Test void invalidInvitationDoesNotConsumeProof() {
-        var invite=new CompanyInvitation(new Company("Synthetic Company"),"invite@example.test","digest",Instant.now().plusSeconds(60));
-        assertThrows(RuntimeException.class,()->invite.consume("other@example.test",Instant.now()));
-        assertNull(invite.getConsumedAt());
-        invite.consume("invite@example.test",Instant.now());
-        assertNotNull(invite.getConsumedAt());
-        assertThrows(RuntimeException.class,()->invite.consume("invite@example.test",Instant.now()));
+    @Test void membershipDecisionIsFinal() {
+        var request=new MembershipRequest(new User(),new Company("Synthetic"));
+        request.decide(MembershipRequest.Status.REJECTED,1L);
+        assertEquals(MembershipRequest.Status.REJECTED,request.getStatus());assertNotNull(request.getDecidedAt());
+        assertThrows(IllegalStateException.class,()->request.decide(MembershipRequest.Status.ACCEPTED,1L));
     }
-    @Test void expiredInvitationDoesNotConsumeProof() {
-        var invite=new CompanyInvitation(new Company("Synthetic Company"),"invite@example.test","digest",Instant.now().minusSeconds(1));
-        assertThrows(RuntimeException.class,()->invite.consume("invite@example.test",Instant.now()));
-        assertNull(invite.getConsumedAt());
-    }
+
 }

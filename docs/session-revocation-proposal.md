@@ -1,3 +1,5 @@
+> Historical document for the original backend. The current alternative is documented in alternative-api.md and alternative-deployment.md.
+
 # Approved session revocation policy
 
 Approved and implemented on 2026-10-08. The filename is retained from the original proposal so existing references continue to work; this is the implemented policy.

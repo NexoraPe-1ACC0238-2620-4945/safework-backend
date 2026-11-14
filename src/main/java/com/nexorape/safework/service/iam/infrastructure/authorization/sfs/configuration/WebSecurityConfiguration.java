@@ -17,7 +17,7 @@ public class WebSecurityConfiguration {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(e -> e.authenticationEntryPoint(unauthorized))
             .authorizeHttpRequests(a -> a.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                .requestMatchers("/api/v1/authentication/sign-in","/api/v1/authentication/sign-up","/v3/api-docs/**","/swagger-ui/**","/swagger-ui.html").permitAll()
+                .requestMatchers("/health","/api/v1/authentication/sign-in","/api/v1/authentication/sign-up","/v3/api-docs/**","/swagger-ui/**","/swagger-ui.html").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(new BearerAuthorizationRequestFilter(tokens,users,sessions),UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(new AuthenticationRateLimitFilter(),BearerAuthorizationRequestFilter.class).build();

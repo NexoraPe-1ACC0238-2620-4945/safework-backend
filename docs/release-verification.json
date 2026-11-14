@@ -1,0 +1,21 @@
+﻿{
+    "baseCommit":  "5badac5ade6c5996af81d5f1038a790ac5321842",
+    "jarSha256":  "AC5CA93FA009682138B88E64A4CE4D0CEFD316431BCF1385287196DD145D7316",
+    "tests":  35,
+    "failures":  0,
+    "errors":  0,
+    "skipped":  0,
+    "packagedHttpChecks":  26,
+    "mysqlVersion":  "9.5.0",
+    "javaVersion":  "25.0.3",
+    "dockerImageBuilt":  true,
+    "productionTouched":  false,
+    "androidChanged":  false,
+    "dockerImageId":  "sha256:a00ddb7d1e42ece5f592a9f8e6d9a79a86becbc0bf811c7ebb7515190e5651be",
+    "dockerHttpChecks":  16,
+    "dockerMysqlImage":  "mysql:8.4",
+    "entrypointChecks":  4,
+    "integratedRepository":  "C:\\Users\\Lucy\\safework-backend",
+    "integratedVerifyCommand":  "mvnw.cmd clean verify (isolated MySQL, clean auxiliary output)",
+    "integratedTests":  35
+}

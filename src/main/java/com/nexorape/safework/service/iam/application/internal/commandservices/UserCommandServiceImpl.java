@@ -22,10 +22,9 @@ public class UserCommandServiceImpl implements UserCommandService {
     }
     @Override @Transactional
     public Optional<ImmutablePair<User,String>> handle(SignInCommand command) {
-        PasswordRules.validate(command.passwordHash());
         var user=users.lockByEmail(command.emailAddress().address());
         boolean matches=hashing.matches(command.passwordHash(),user.map(User::getPasswordHash).orElse(dummyHash));
-        if(user.isEmpty() || !matches || !user.get().isEnabled() || !user.get().getCompany().isActive())
+        if(user.isEmpty() || !matches || !user.get().isEnabled())
             throw new ApiException(401,"INVALID_CREDENTIALS","Credentials are invalid.");
         return Optional.of(ImmutablePair.of(user.get(),tokens.generateToken(user.get())));
     }

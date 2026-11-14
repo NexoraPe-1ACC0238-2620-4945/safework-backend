@@ -1,93 +1,37 @@
 package com.nexorape.safework.service.iam.interfaces.rest;
-
-import com.nexorape.safework.service.iam.domain.model.queries.company.GetAllCompaniesQuery;
-import com.nexorape.safework.service.iam.domain.model.queries.company.GetCompanyByIdQuery;
-import com.nexorape.safework.service.iam.domain.model.queries.company.GetCompanyByRegistrationCodeQuery;
-import com.nexorape.safework.service.iam.domain.model.valueobjects.company.RegistrationCode;
-import com.nexorape.safework.service.iam.domain.services.company.CompanyCommandService;
-import com.nexorape.safework.service.iam.domain.services.company.CompanyQueryService;
-import com.nexorape.safework.service.iam.interfaces.rest.resources.company.CompanyResource;
-import com.nexorape.safework.service.iam.interfaces.rest.resources.company.CreateCompanyResource;
-import com.nexorape.safework.service.iam.interfaces.rest.transform.company.CompanyResourceFromEntityAssembler;
-import com.nexorape.safework.service.iam.interfaces.rest.transform.company.CreateCompanyCommandFromResourceAssembler;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import com.nexorape.safework.service.iam.application.internal.commandservices.MembershipService;
+import com.nexorape.safework.service.iam.application.internal.security.AccessPolicy;
+import com.nexorape.safework.service.iam.infrastructure.persistence.jpa.repositories.CompanyRepository;
+import com.nexorape.safework.service.iam.interfaces.rest.resources.company.*;
+import com.nexorape.safework.service.shared.application.errors.ApiException;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.stream.Collectors;
-
-@RestController
-@RequestMapping(value="/api/v1/companies", produces = MediaType.APPLICATION_JSON_VALUE)
-@Tag(name="Companies", description = "Company Management Endpoints")
+import org.springframework.http.*;
+import org.springframework.data.domain.*;
+import java.util.List;
+@RestController @RequestMapping("/api/v1/companies") @Validated
 public class CompaniesController {
-    private final CompanyCommandService companyCommandService;
-    private final CompanyQueryService companyQueryService;
-
-    public CompaniesController(CompanyCommandService companyCommandService, CompanyQueryService companyQueryService) {
-        this.companyCommandService = companyCommandService;
-        this.companyQueryService = companyQueryService;
-    }
-
+    private final MembershipService memberships;private final CompanyRepository companies;private final AccessPolicy access;
+    public CompaniesController(MembershipService memberships,CompanyRepository companies,AccessPolicy access) {this.memberships=memberships;this.companies=companies;this.access=access;}
     @PostMapping
-    @Operation(summary = "Create a new company")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Company created"),
-            @ApiResponse(responseCode = "400", description = "Bad request")})
-    public ResponseEntity<CompanyResource> createCompany(@RequestBody CreateCompanyResource resource){
-        var createCompanyCommand = CreateCompanyCommandFromResourceAssembler.toCommandFromResource(resource);
-        var company = companyCommandService.handle(createCompanyCommand);
-        if(company.isEmpty()) return ResponseEntity.badRequest().build();
-        var createdCompany = company.get();
-        var companyResource = CompanyResourceFromEntityAssembler.toResourceFromEntity(createdCompany);
-        return new ResponseEntity<>(companyResource, HttpStatus.CREATED);
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode="201",description="Company created; sign in again after the membership change")
+    public ResponseEntity<CompanyResource> create(@Valid @RequestBody CreateCompanyResource body) {
+        var company=memberships.createCompany(body.name());
+        return ResponseEntity.status(201).body(new CompanyResource(company.getId(),company.getName()));
     }
-
     @GetMapping
-    @Operation(summary = "Get All Companies")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Companies fetched!"),
-            @ApiResponse(responseCode = "400", description = "Bad request")})
-    public ResponseEntity getAllCompanies(){
-        var getAllCompaniesQuery = new GetAllCompaniesQuery();
-        var companies = companyQueryService.handle(getAllCompaniesQuery);
-        var companiesResources = companies.stream().map(CompanyResourceFromEntityAssembler::toResourceFromEntity).collect(Collectors.toList());
-        return ResponseEntity.ok(companiesResources);
+    public List<CompanyResource> search(@RequestParam(defaultValue="") @Size(max=120) String search,
+            @RequestParam(defaultValue="0") @Min(0) @Max(10000) int page,@RequestParam(defaultValue="20") @Min(1) @Max(50) int size) {
+        access.current();
+        return companies.findByActiveTrueAndNameContainingIgnoreCase(search.strip(),PageRequest.of(page,size,Sort.by("name").and(Sort.by("id"))))
+            .stream().map(c->new CompanyResource(c.getId(),c.getName())).toList();
     }
-
     @GetMapping("/{companyId}")
-    @Operation(summary = "Get Company By Id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "A company has been fetched!"),
-            @ApiResponse(responseCode = "400", description = "Bad request")})
-    public ResponseEntity<CompanyResource> getCompanyById(@PathVariable Long companyId){
-        var getCompanyByIdQuery = new GetCompanyByIdQuery(companyId);
-        var company = companyQueryService.handle(getCompanyByIdQuery);
-        if(company.isEmpty()){
-            return ResponseEntity.notFound().build();
-        }
-        var companyResource = CompanyResourceFromEntityAssembler.toResourceFromEntity(company.get());
-        return ResponseEntity.ok(companyResource);
+    public CompanyResource detail(@PathVariable @Positive Long companyId) {
+        access.current();
+        var company=companies.findById(companyId).filter(c->c.isActive()).orElseThrow(ApiException::notFound);
+        return new CompanyResource(company.getId(),company.getName());
     }
-
-    @GetMapping("/registration_code/{registrationCode}")
-    @Operation(summary = "Get Company By its registration code")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "The company has been found!"),
-            @ApiResponse(responseCode = "400", description = "Bad request")})
-    public ResponseEntity<CompanyResource> getCompanyByRegistrationCode(@PathVariable String registrationCode){
-        var getCompanyByRegistrationCodeQuery = new GetCompanyByRegistrationCodeQuery(new RegistrationCode(registrationCode));
-        var company = companyQueryService.handle(getCompanyByRegistrationCodeQuery);
-        if(company.isEmpty()){
-            return ResponseEntity.notFound().build();
-        }
-        var companyResource = CompanyResourceFromEntityAssembler.toResourceFromEntity(company.get());
-        return ResponseEntity.ok(companyResource);
-    }
-
-
 }

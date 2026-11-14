@@ -14,7 +14,7 @@ public class SessionRegistry {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public UserSession open(User user, Instant createdAt, Instant expiresAt) {
-        if (!user.isEnabled() || !user.getCompany().isActive()) throw ApiException.session();
+        if (!user.isEnabled()) throw ApiException.session();
         return sessions.saveAndFlush(new UserSession(user, createdAt, expiresAt));
     }
     @Transactional(readOnly = true)

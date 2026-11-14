@@ -1,0 +1,1 @@
+ALTER TABLE membership_requests ADD COLUMN version BIGINT NOT NULL DEFAULT 0;

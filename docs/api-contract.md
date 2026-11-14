@@ -1,3 +1,5 @@
+> Historical document for the original backend. The current alternative is documented in alternative-api.md and alternative-deployment.md.
+
 # Current-course API contract
 
 This describes corrected source on feature/backend-foundation and the validated local runtime. It is not the historical backend contract or a claim that main contains a deployed service. No public deployment URL is supplied. Android must not default to the historical API.

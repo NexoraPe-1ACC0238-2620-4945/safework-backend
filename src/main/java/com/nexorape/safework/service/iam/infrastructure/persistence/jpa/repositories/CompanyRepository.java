@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface CompanyRepository extends JpaRepository<Company, Long> {
+    java.util.List<Company> findByActiveTrueAndNameContainingIgnoreCase(String name,org.springframework.data.domain.Pageable page);
     Optional<Company> findByRegistrationCode(RegistrationCode registrationCode);
 
     Optional<Company> findByName(String name);

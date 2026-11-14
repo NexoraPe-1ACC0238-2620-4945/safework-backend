@@ -38,7 +38,7 @@ public class TokenServiceImpl implements BearerTokenService {
     }
     private String build(User user) {
         String email=user.getEmail(); Long companyId=user.getCompanyId(); Long userId=user.getId();
-        if (email == null || companyId == null || userId == null)
+        if (email == null || userId == null)
             throw new IllegalArgumentException("A persisted account is required.");
         var now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         var session = sessions.open(user, now, now.plus(expirationDays, ChronoUnit.DAYS));
@@ -55,8 +55,8 @@ public class TokenServiceImpl implements BearerTokenService {
         try { java.util.UUID.fromString(claims.getId()); } catch(IllegalArgumentException ex) { throw new MalformedJwtException("Invalid session identifier."); }
         if (!"HS512".equals(parsed.getHeader().getAlgorithm()) || claims.getSubject() == null
                 || claims.getIssuedAt() == null || claims.getExpiration() == null
-                || claims.get("companyId", Long.class) == null || claims.get("userId", Long.class) == null
-                || claims.get("companyId", Long.class) <= 0 || claims.get("userId", Long.class) <= 0
+                || claims.get("userId", Long.class) == null
+                || (claims.get("companyId", Long.class) != null && claims.get("companyId", Long.class) <= 0) || claims.get("userId", Long.class) <= 0
                 || claims.getIssuedAt().after(new Date())
                 || !claims.getExpiration().after(claims.getIssuedAt()))
             throw new MalformedJwtException("Invalid session claims.");

@@ -7,7 +7,6 @@ public class CompanyResourceFromEntityAssembler {
     public static CompanyResource toResourceFromEntity(Company entity) {
         return new CompanyResource(
                 entity.getId(),
-                entity.getName(),
-                entity.getRegistrationCode());
+                entity.getName());
     }
 }

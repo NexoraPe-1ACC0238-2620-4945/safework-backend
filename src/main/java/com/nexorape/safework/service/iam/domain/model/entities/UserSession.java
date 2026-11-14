@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 public class UserSession {
     @Id private UUID id;
     @Column(nullable = false) private Long userId;
-    @Column(nullable = false) private Long companyId;
+    private Long companyId;
     @Column(nullable = false) private long securityVersion;
     @Column(nullable = false, length = 64) private String rolesSnapshot;
     @Column(nullable = false) private Instant createdAt;
@@ -36,8 +36,8 @@ public class UserSession {
     }
     public boolean isActiveFor(User user, Instant now) {
         return revokedAt == null && expiresAt.isAfter(now) && user.isEnabled()
-                && user.getCompany().isActive() && userId.equals(user.getId())
-                && companyId.equals(user.getCompanyId()) && securityVersion == user.getSecurityVersion()
+                && userId.equals(user.getId())
+                && java.util.Objects.equals(companyId,user.getCompanyId()) && securityVersion == user.getSecurityVersion()
                 && rolesSnapshot.equals(rolesOf(user));
     }
 }

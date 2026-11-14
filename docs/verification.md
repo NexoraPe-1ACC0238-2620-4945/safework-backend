@@ -1,3 +1,5 @@
+> Historical verification of the original backend. For this alternative, see alternative-verification.md.
+
 # Backend foundation verification
 
 2026-10-08 (America/Lima). Corrected current-course foundation, not the historical runtime and not a deployment. Application revision: `183fc4ffde12e960d26d7d19f393da67fd8ecca3`. Regression revision: `12a189fc1b30bdf6c2270ab7365536137d3f4e2b`. These revisions differ from the successful verified files only by removal of empty final lines; documentation changes do not change executable behavior.

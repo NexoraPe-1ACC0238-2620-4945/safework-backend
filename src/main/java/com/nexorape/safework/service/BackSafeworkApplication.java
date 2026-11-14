@@ -1,17 +1,26 @@
 package com.nexorape.safework.service;
-import org.springframework.boot.SpringApplication;
+import org.springframework.boot.*;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
-@SpringBootApplication
-@EnableJpaAuditing
+import java.util.*;
+@SpringBootApplication @EnableJpaAuditing
 public class BackSafeworkApplication {
     public static void main(String[] args) {
-        if("true".equalsIgnoreCase(System.getenv("SAFEWORK_BOOTSTRAP_ENABLED"))) {
-            var application=new SpringApplication(BackSafeworkApplication.class);
-            // A one-shot non-web process exposes no bootstrap listener.
-            application.setDefaultProperties(java.util.Map.of("safework.bootstrap.enabled","true"));
-            application.setWebApplicationType(org.springframework.boot.WebApplicationType.NONE);
-            try(var context=application.run(args)) { /* ApplicationRunner performs one transactional bootstrap. */ }
-        } else SpringApplication.run(BackSafeworkApplication.class,args);
+        if("true".equalsIgnoreCase(System.getenv("SAFEWORK_BOOTSTRAP_ENABLED")))
+            throw new IllegalStateException("The global ADMIN bootstrap is not part of this alternative.");
+        boolean reset="true".equalsIgnoreCase(System.getenv("SAFEWORK_PASSWORD_RESET_ENABLED"));
+        boolean migrate="true".equalsIgnoreCase(System.getenv("SAFEWORK_MIGRATE_ENABLED"));
+        if(reset && migrate) throw new IllegalStateException("Run migration and recovery separately.");
+        var app=new SpringApplication(BackSafeworkApplication.class);
+        if(reset || migrate) {
+            app.setWebApplicationType(WebApplicationType.NONE);
+            var flags=new ArrayList<>(Arrays.asList(args));
+            flags.add(reset?"--safework.password-reset.enabled=true":"--spring.flyway.enabled=true");
+            if(migrate && "true".equalsIgnoreCase(System.getenv("SAFEWORK_BASELINE_LEGACY_SCHEMA"))) {
+                flags.add("--spring.flyway.baseline-on-migrate=true");
+                flags.add("--spring.flyway.baseline-version=1");
+            }
+            try(var context=app.run(flags.toArray(String[]::new))) { }
+        } else app.run(args);
     }
 }
