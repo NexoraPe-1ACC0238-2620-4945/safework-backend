@@ -60,6 +60,11 @@ public class MembershipService {
     public List<MembershipRequest> companyRequests(Long companyId,int page,int size) {
         manager(companyId);return requests.findByCompanyIdOrderByIdDesc(companyId,PageRequest.of(page,size));
     }
+    @Transactional(readOnly=true)
+    public List<User> companyMembers(Long companyId,int page,int size) {
+        manager(companyId);
+        return users.findByCompany_IdOrderByIdAsc(companyId,PageRequest.of(page,size));
+    }
     private User manager(Long companyId) {
         var actor=access.employer();
         if(!actor.getCompanyId().equals(companyId)) throw ApiException.notFound();

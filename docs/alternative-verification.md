@@ -89,3 +89,17 @@ Legacy explicit PKCS12 input remains supported.
 
 Publish the reviewed correction and redeploy the selected branch to update Render.
 The original deployment and migration requirements above still apply to real data.
+
+## Member directory for mobile onboarding
+
+The mobile employer screen required a company-scoped member directory. Added a
+paginated GET /api/v1/companies/{companyId}/members route with the existing employer
+and company checks, current UserResource mapping and a bounded repository query.
+Maven clean verify passed 41 tests with zero failures/errors/skips against isolated
+MySQL after the addition. The HTTP regression checks anonymous, worker, unassigned
+and foreign-employer denial, pagination limits and revoked-member visibility.
+
+The Android client additionally passed its real local self-service IAM, incident and
+handling/notification integrations against the newly packaged JAR. Aiven was not
+connected or migrated by this increment. Docker TLS evidence above belongs to the
+prior TLS correction (b04ef93); its source and TLS behavior are unchanged here.

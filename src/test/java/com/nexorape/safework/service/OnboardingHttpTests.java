@@ -112,6 +112,30 @@ class OnboardingHttpTests {
         status(call("invalid page size","GET","/companies?size=0",token,null),400);
         status(call("unknown discovery parameter","GET","/companies?members=true",token,null),400);
     }
+    @Test void memberDirectoryRequiresOwnCompanyEmployerAndReflectsRevocation() throws Exception {
+        String route="/companies/"+alpha.getId()+"/members";
+        status(call("anonymous cannot list members","GET",route,null,null),401);
+        status(call("worker cannot list members","GET",route,workerToken,null),403);
+        status(call("unassigned cannot list members","GET",route,adminToken,null),403);
+        status(call("foreign employer cannot list members","GET",route,foreignEmployerToken,null),404);
+        status(call("invalid directory size","GET",route+"?size=51",employerToken,null),400);
+        var member=user(alpha,Roles.WORKER);
+        status(call("directory fixture revoke","DELETE",route+"/"+member.getId(),employerToken,null),200);
+        boolean found=false;
+        for(int page=0;page<100;page++) {
+            var result=call("own company member directory","GET",route+"?size=50&page="+page,employerToken,null);
+            status(result,200);
+            for(var item:result.body) {
+                assertEquals(alpha.getId().longValue(),item.get("companyId").asLong());
+                assertFalse(item.has("passwordHash")); assertFalse(item.has("password"));
+                if(item.get("id").asLong()==member.getId().longValue()) {
+                    found=true; assertEquals("REVOKED",item.get("membershipStatus").asString());
+                }
+            }
+            if(result.body.size()<50) break;
+        }
+        assertTrue(found,"The employer must see the current status of its own revoked member.");
+    }
     @Test void creatingCompanyNeedsNoAdminAndBindsAccountPermanently()throws Exception {
         var account=user(null,Roles.WORKER);var token=login(account);
         var created=call("create company without ADMIN","POST","/companies",token,Map.of("name","Synthetic Self Service "+UUID.randomUUID()));

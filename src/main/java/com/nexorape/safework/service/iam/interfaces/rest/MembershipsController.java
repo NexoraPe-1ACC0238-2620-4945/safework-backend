@@ -35,6 +35,13 @@ public class MembershipsController {
     public RequestResource accept(@PathVariable @Positive Long companyId,@PathVariable @Positive Long requestId) {return RequestResource.from(service.decide(companyId,requestId,true));}
     @PostMapping("/companies/{companyId}/membership-requests/{requestId}/reject")
     public RequestResource reject(@PathVariable @Positive Long companyId,@PathVariable @Positive Long requestId) {return RequestResource.from(service.decide(companyId,requestId,false));}
+    @GetMapping("/companies/{companyId}/members")
+    public List<UserResource> members(@PathVariable @Positive Long companyId,
+            @RequestParam(defaultValue="0") @Min(0) @Max(10000) int page,
+            @RequestParam(defaultValue="20") @Min(1) @Max(50) int size) {
+        return service.companyMembers(companyId,page,size).stream()
+            .map(UserResourceFromEntityAssembler::toResourceFromEntity).toList();
+    }
     @DeleteMapping("/companies/{companyId}/members/{userId}")
     public UserResource revoke(@PathVariable @Positive Long companyId,@PathVariable @Positive Long userId) {return UserResourceFromEntityAssembler.toResourceFromEntity(service.revoke(companyId,userId));}
 }

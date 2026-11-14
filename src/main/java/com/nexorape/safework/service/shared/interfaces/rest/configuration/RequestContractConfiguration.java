@@ -13,7 +13,7 @@ public class RequestContractConfiguration implements WebMvcConfigurer {
                     var route=request.getRequestURI();
                     boolean companies="GET".equals(request.getMethod()) && route.equals("/api/v1/companies");
                     boolean memberships="GET".equals(request.getMethod()) && (route.equals("/api/v1/users/me/membership-requests")
-                        || route.matches("/api/v1/companies/[0-9]+/membership-requests"));
+                        || route.matches("/api/v1/companies/[0-9]+/(?:membership-requests|members)"));
                     var allowed=companies?java.util.Set.of("search","page","size"):memberships?java.util.Set.of("page","size"):java.util.Set.of();
                     if(!allowed.containsAll(request.getParameterMap().keySet()) || request.getParameterMap().values().stream().anyMatch(v->v.length!=1)) throw ApiException.validation();
                 }

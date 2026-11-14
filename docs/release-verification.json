@@ -1,7 +1,7 @@
 ﻿{
     "baseCommit":  "5badac5ade6c5996af81d5f1038a790ac5321842",
-    "jarSha256":  "48757AB77E5BAA71E210F0E5F3F28829C358C57316FDD22E5B665EC352AE6740",
-    "tests":  40,
+    "jarSha256":  "232F682AC88A5B6D7137E2EA0758A550D1DE375963F15BC1623CD9E2A6EF56D0",
+    "tests":  41,
     "failures":  0,
     "errors":  0,
     "skipped":  0,
@@ -17,9 +17,11 @@
     "entrypointChecks":  4,
     "integratedRepository":  "C:\\Users\\Lucy\\safework-backend",
     "integratedVerifyCommand":  "mvnw.cmd clean verify (isolated MySQL, clean auxiliary output)",
-    "integratedTests":  40,
+    "integratedTests":  41,
     "productionProfileTlsChecks":  5,
     "productionProfileTlsMysqlImage":  "mysql:8.4",
     "productionProfileTlsUsesSyntheticCa":  true,
-    "localTlsFixBaseCommit":  "1a5bf6e73734e5296924d46653579facd0fe6446"
+    "localTlsFixBaseCommit":  "1a5bf6e73734e5296924d46653579facd0fe6446",
+    "dockerVerificationSourceCommit":  "b04ef93f165768f2edead8fc13e6b516aa0de1c5",
+    "employerMemberDirectoryVerified":  true
 }

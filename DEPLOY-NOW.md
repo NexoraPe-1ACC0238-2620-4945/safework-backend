@@ -69,7 +69,7 @@ Spring does not automatically load that file.
 
 ## Verification in this checkout
 
-A clean build and all 40 tests passed after the TLS correction, using the existing
+A clean build and all 41 tests passed after the member directory addition, using the existing
 isolated MySQL test instance. Reports are in .local/verified-build/surefire-reports;
 the build log is .local/maven-verify.log.
 
@@ -91,3 +91,5 @@ The same production Java implementation previously passed a Docker image build,
 16 HTTP checks with isolated mysql:8.4, 26 packaged-JAR HTTP checks and four truststore
 entrypoint checks. Actual Aiven migration and public Render HTTP validation are
 still pending. Five production-profile TLS checks passed with a synthetic CA and isolated MySQL8.4, including certificate-hostname rejection. This guide does not claim that the running Render service was changed.
+
+The mobile employer screen also requires GET /api/v1/companies/{companyId}/members. This directory addition needs a backend redeploy but no new migration or database settings.

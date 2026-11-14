@@ -10,6 +10,8 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    java.util.List<User> findByCompany_IdOrderByIdAsc(Long companyId, org.springframework.data.domain.Pageable pageable);
+
     /**
      * This method is responsible for finding the user by username.
      * @param emailAddress The email.

@@ -86,3 +86,12 @@ Implement signup without codes; company search/creation; own pending/rejected re
 EMPLOYER decisions and member revocation; clear onboarding states and re-login after
 security-context changes. Preserve the existing incident and notification flows after
 membership becomes active. This backend delivery does not modify Android or Flutter.
+
+## Employer member directory
+
+GET /companies/{companyId}/members?page=0&size=20 returns UserResource records for
+that company only, including ACTIVE/REVOKED membership status. Page is 0-10000;
+size is 1-50. Only its active EMPLOYER can read the directory. WORKER/unassigned
+accounts receive 403; a foreign employer receives 404. Passwords and password hashes
+are never returned. This supplements /users, which deliberately returns only the
+caller. No database migration or connection-setting change is required.
